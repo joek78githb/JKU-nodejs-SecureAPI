@@ -152,14 +152,14 @@ Reduced authentication overhead across services
    -> The .env file attached to the root of the project folder has the configs required to setup a oauth client/app.
 
 # Test Scenarios
-Successful Authentication Flow
-Valid JWT issued by Auth0
-Gateway validates token successfully
-Request forwarded to backend with identity context
+Successful Authentication Flow:
+Valid JWT issued by Auth0.
+Gateway validates token successfully.
+Request forwarded to backend with identity context.
 
-Failed Authentication Flow
-Missing or invalid JWT
-Gateway rejects request with 401 Unauthorized
+Failed Authentication Flow:
+Missing or invalid JWT.
+Gateway rejects request with 401 Unauthorized.
 
 
 # Commands to test the success and failure scenarios
