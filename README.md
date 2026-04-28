@@ -1,4 +1,4 @@
-# The "Secure Entry" Gateway PoC
+# The "Secure Entry" Gateway POC
 
 Overview
 
