@@ -1,26 +1,109 @@
 # The "Secure Entry" Gateway PoC
 
-# Description
-The goal of this project is to ensure no traffic reaches the backend compute layer unless it has been pre-verified by this central gateway. To save on compute costs and latency, the backend service relies entirely on the Gateway for authentication and must not perform its own JWT validation.
+Overview
 
-# Diagram of traffic flow for visualising
+This project demonstrates a gateway-enforced authentication architecture for securing access to backend services in a distributed system.
 
-+-----------+           +---------------+            +---------------+
-| Client    | --------> |GateWay/Proxy  | ---------> | Backend API   |
-|           | <-------  |               | <--------  |               |
-+-----------+           +---------------+            +---------------+
+All external requests are authenticated at a central gateway layer using OIDC (Auth0) and JWT validation, ensuring that only verified and authorized traffic reaches backend services.
 
-# Identifying the above components
+The backend is intentionally decoupled from external authentication logic and operates within a trusted internal execution boundary.
 
-1. Client – The user or application sends request via a JWT token to the Gateway/Proxy server.
-            The client is configured as a web application in the OIDC complaint provide Auth0. A "client_ID" and "client_secret" has been automatically generated.
-            A test user has been created in Autho and updated to allow  the test user to access this application.
-2. Gateway/Proxy – Handles routing, authentication, authorisation.
-3. Backend API – Actual services that process the request and return data.
+# Architecture
 
-#JWT generation steps:
-1. To get an authosation code:
-   
+Client (Web / API Consumer)
+        |
+        |  OAuth2 / OIDC (Auth0) → JWT
+        v
++----------------------+
+|   Gateway / Proxy    |
+|----------------------|
+| - JWT validation     |
+| - Signature verify   |
+| - Authorization      |
+| - Claim extraction   |
++----------------------+
+        |
+        | Trusted internal request
+        | (identity headers)
+        v
++----------------------+
+|    Backend API       |
+|----------------------|
+| - Business logic     |
+| - No external auth   |
++----------------------+
+
+# Security Model
+Trust Boundary
+
+This system enforces a clear separation between external and internal trust domains:
+
+The Gateway is the only externally exposed component
+It is responsible for validating all incoming authentication tokens
+Backend services operate within a trusted internal network boundary
+
+# Identity Propagation
+
+After successful authentication, the Gateway forwards requests to backend services with trusted identity assertions via header such as:
+
+x-verified-user
+
+
+The header is 
+
+Generated only by the Gateway
+Not accepted from external clients
+Treated as trusted input within the internal network
+
+# Authentication Flow
+Client authenticates via Auth0 (OIDC)
+Client receives a signed JWT access token
+Client sends request with JWT to Gateway
+Gateway:
+Validates JWT signature
+Verifies token claims and expiration
+Extracts identity information
+Gateway forwards request to Backend with identity header
+Backend processes request based on trusted identity context
+
+# Threat Model
+1. Token Tampering / Replay Attacks
+Risk: Invalid or modified JWTs used to access system
+Mitigation: Gateway performs cryptographic JWT verification using Auth0 public keys
+
+2. Header Spoofing
+Risk: External actor injects fake identity headers
+Mitigation:
+Backend only trusts headers originating from Gateway
+Internal network isolation prevents direct backend access
+
+3. Direct Backend Access
+Risk: Bypass of Gateway authentication layer
+Mitigation:
+Backend services are not exposed externally
+Only Gateway has routing access
+
+4. Privilege Escalation via Claims Manipulation
+Risk: User modifies token claims (roles, permissions)
+Mitigation:
+Gateway enforces authorization before forwarding requests
+Backend treats identity headers as non-authoritative input
+
+# Design Rationale
+
+This architecture separates concerns between authentication and business logic:
+
+Authentication is centralized at the Gateway to ensure consistency and reduce duplication
+Backend services remain stateless with respect to authentication
+Identity is propagated via trusted internal headers after validation
+
+This model is optimized for:
+
+Simplified backend services
+Centralized security enforcement
+Reduced authentication overhead across services
+
+
 
 # To Run the project locally
 
@@ -67,6 +150,16 @@ The goal of this project is to ensure no traffic reaches the backend compute lay
 
 # To setu OIDC Credentials
    -> The .env file attached to the root of the project folder has the configs required to setup a oauth client/app.
+
+# Test Scenarios
+Successful Authentication Flow
+Valid JWT issued by Auth0
+Gateway validates token successfully
+Request forwarded to backend with identity context
+
+Failed Authentication Flow
+Missing or invalid JWT
+Gateway rejects request with 401 Unauthorized
 
 
 # Commands to test the success and failure scenarios
